@@ -1,0 +1,21 @@
+# Build output
+**/bin/
+**/obj/
+
+# .NET user/IDE files
+*.user
+.vs/
+.idea/
+*.suo
+
+# Local runtime data (SQLite db, fake receipts, generated files)
+agent/FiscalAgent/data/
+
+# Local config overrides / secrets — never commit real tokens
+appsettings.local.json
+appsettings.*.local.json
+**/appsettings.local.json
+
+# OS noise
+Thumbs.db
+.DS_Store

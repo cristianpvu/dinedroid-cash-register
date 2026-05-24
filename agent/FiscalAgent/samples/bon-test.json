@@ -1,0 +1,13 @@
+{
+  "fiscalCode": null,
+  "table": "5",
+  "waiter": "Test",
+  "lines": [
+    { "name": "Cafea espresso",    "unitPriceBani": 1200, "qtyThousandths": 2000, "unit": "buc", "vatGroup": 1, "department": 1 },
+    { "name": "Apa plata 0.5L",    "unitPriceBani": 600,  "qtyThousandths": 1000, "unit": "buc", "vatGroup": 1, "department": 1 },
+    { "name": "Tort de ciocolata", "unitPriceBani": 1850, "qtyThousandths": 1000, "unit": "buc", "vatGroup": 1, "department": 1 }
+  ],
+  "payments": [
+    { "type": 1, "amountBani": 4850 }
+  ]
+}
