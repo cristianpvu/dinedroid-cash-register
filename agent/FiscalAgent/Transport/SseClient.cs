@@ -3,10 +3,8 @@ using System.Text;
 using System.Text.Json;
 using FiscalAgent.Contracts;
 using FiscalAgent.Configuration;
-using FiscalAgent.Contracts;
 using FiscalAgent.Jobs;
 using FiscalAgent.Storage;
-using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -212,7 +210,7 @@ public sealed class SseClient : BackgroundService
 
     private void LaunchUpdater()
     {
-        var updaterPath = Path.Combine(AppContext.BaseDirectory, "updater.ps1");
+        var updaterPath = Path.Combine(AppContext.BaseDirectory, "deploy", "updater.ps1");
         if (!File.Exists(updaterPath))
         {
             _log.LogWarning("updater.ps1 not found at {Path} — cannot self-update", updaterPath);
@@ -234,4 +232,5 @@ public sealed class SseClient : BackgroundService
             _log.LogError(ex, "Failed to launch updater.ps1");
         }
     }
+
 }
