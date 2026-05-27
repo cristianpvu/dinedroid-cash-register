@@ -16,4 +16,9 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="deploy\setup.ps1" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="deploy\install.bat" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

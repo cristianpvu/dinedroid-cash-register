@@ -1,0 +1,3 @@
+@echo off
+echo Pornire instalare FiscalAgent cu drepturi de Administrator...
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File ""%~dp0setup.ps1""' -Verb RunAs -Wait"
