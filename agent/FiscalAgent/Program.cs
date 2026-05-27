@@ -36,6 +36,7 @@ builder.Services.AddOptions<AgentOptions>()
 
 builder.Services.AddSingleton<JobStore>();
 builder.Services.AddSingleton<JobProcessor>();
+builder.Services.AddSingleton<CommandProcessor>();
 builder.Services.AddSingleton<ResultReporter>();
 
 // --- Fiscal device: Fake for dev, FiscalNet to drive the real cash register ---

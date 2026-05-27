@@ -46,6 +46,30 @@ public sealed class FiscalNetDevice : IFiscalDevice
         return ParseResponse(raw);
     }
 
+    public async Task<FiscalResult> ExecuteSimpleAsync(string fiscalCommand, CancellationToken ct)
+    {
+        var body = JsonSerializer.Serialize(new[] { fiscalCommand });
+        _log.LogInformation("FiscalNet POST /api/Receipt (command): {Cmd}", fiscalCommand);
+
+        HttpResponseMessage resp;
+        try
+        {
+            using var content = new StringContent(body, Encoding.UTF8, "application/json");
+            resp = await _http.PostAsync("/api/Receipt", content, ct);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "FiscalNet command request failed");
+            return FiscalResult.Unknown("CONN_ERROR", ex.Message);
+        }
+
+        var raw = await resp.Content.ReadAsStringAsync(ct);
+        if (!resp.IsSuccessStatusCode)
+            return FiscalResult.Unknown($"HTTP_{(int)resp.StatusCode}", $"FiscalNet HTTP {(int)resp.StatusCode}", raw);
+
+        return ParseResponse(raw);
+    }
+
     private FiscalResult ParseResponse(string raw)
     {
         var kv = ExtractKeyValues(raw);

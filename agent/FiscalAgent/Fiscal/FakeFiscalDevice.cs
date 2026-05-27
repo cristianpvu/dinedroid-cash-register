@@ -33,4 +33,10 @@ public sealed class FakeFiscalDevice : IFiscalDevice
 
         return FiscalResult.Success(bon, string.Join("\n", commands));
     }
+
+    public Task<FiscalResult> ExecuteSimpleAsync(string fiscalCommand, CancellationToken ct)
+    {
+        _log.LogInformation("[FAKE] ExecuteSimple: {Cmd}", fiscalCommand);
+        return Task.FromResult(FiscalResult.Success(null, $"FAKE OK: {fiscalCommand}"));
+    }
 }

@@ -34,6 +34,7 @@ public sealed class BackendOptions
     public string Token { get; set; } = "";
     public string StreamPath { get; set; } = "/agent/stream";
     public string ResultPath { get; set; } = "/agent/jobs/{jobId}/result";
+    public string CommandResultPath { get; set; } = "/agent/commands/{commandId}/result";
     public int ReconnectDelaySeconds { get; set; } = 5;
 
     /// <summary>

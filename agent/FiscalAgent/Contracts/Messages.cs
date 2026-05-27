@@ -55,6 +55,25 @@ public sealed class JobPayment
     [JsonPropertyName("amountBani")] public long AmountBani { get; set; }
 }
 
+/// <summary>One-shot fiscal operation sent from the cloud (X/Z report, cash, cancel, drawer).</summary>
+public sealed class CommandMessage
+{
+    [JsonPropertyName("v")] public int V { get; set; } = 1;
+    [JsonPropertyName("type")] public string Type { get; set; } = "fiscal.command";
+    [JsonPropertyName("commandId")] public string CommandId { get; set; } = "";
+    [JsonPropertyName("command")] public string Command { get; set; } = "";
+    [JsonPropertyName("amountBani")] public long? AmountBani { get; set; }
+}
+
+/// <summary>What the agent reports back after executing a fiscal command.</summary>
+public sealed class CommandResultMessage
+{
+    [JsonPropertyName("commandId")] public string CommandId { get; set; } = "";
+    [JsonPropertyName("status")] public string Status { get; set; } = ""; // "success" | "failed"
+    [JsonPropertyName("raw")] public string? Raw { get; set; }
+    [JsonPropertyName("error")] public JobError? Error { get; set; }
+}
+
 /// <summary>What the agent reports back to the cloud once printing is resolved.</summary>
 public sealed class ResultMessage
 {

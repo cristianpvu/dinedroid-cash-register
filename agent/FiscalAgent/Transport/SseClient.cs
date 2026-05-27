@@ -1,10 +1,12 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using FiscalAgent.Contracts;
 using FiscalAgent.Configuration;
 using FiscalAgent.Contracts;
 using FiscalAgent.Jobs;
 using FiscalAgent.Storage;
+using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -23,6 +25,7 @@ public sealed class SseClient : BackgroundService
 
     private readonly IHttpClientFactory _factory;
     private readonly JobProcessor _processor;
+    private readonly CommandProcessor _cmdProcessor;
     private readonly JobStore _store;
     private readonly ResultReporter _reporter;
     private readonly AgentOptions _opts;
@@ -31,6 +34,7 @@ public sealed class SseClient : BackgroundService
     public SseClient(
         IHttpClientFactory factory,
         JobProcessor processor,
+        CommandProcessor cmdProcessor,
         JobStore store,
         ResultReporter reporter,
         IOptions<AgentOptions> opts,
@@ -38,6 +42,7 @@ public sealed class SseClient : BackgroundService
     {
         _factory = factory;
         _processor = processor;
+        _cmdProcessor = cmdProcessor;
         _store = store;
         _reporter = reporter;
         _opts = opts.Value;
@@ -155,24 +160,50 @@ public sealed class SseClient : BackgroundService
             return;
         }
 
-        JobMessage? job = null;
+        string? msgType = null;
         try
         {
-            job = JsonSerializer.Deserialize<JobMessage>(data.Trim());
+            using var doc = JsonDocument.Parse(data.Trim());
+            if (doc.RootElement.TryGetProperty("type", out var t))
+                msgType = t.GetString();
         }
-        catch (Exception ex)
-        {
-            _log.LogError(ex, "Discarding unparseable job payload: {Data}", data);
-        }
+        catch { /* handled below */ }
 
-        if (job is { Type: "fiscal.print", JobId.Length: > 0 })
+        if (msgType == "fiscal.print")
         {
-            var result = await _processor.ProcessAsync(job, ct);
-            await _reporter.ReportAsync(result, ct);
+            try
+            {
+                var job = JsonSerializer.Deserialize<JobMessage>(data.Trim());
+                if (job is { JobId.Length: > 0 })
+                {
+                    var result = await _processor.ProcessAsync(job, ct);
+                    await _reporter.ReportAsync(result, ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed to process fiscal.print payload");
+            }
         }
-        else if (job is not null)
+        else if (msgType == "fiscal.command")
         {
-            _log.LogWarning("Ignoring message of unsupported type '{Type}'", job.Type);
+            try
+            {
+                var cmd = JsonSerializer.Deserialize<CommandMessage>(data.Trim());
+                if (cmd is { CommandId.Length: > 0 })
+                {
+                    var result = await _cmdProcessor.ProcessAsync(cmd, ct);
+                    await _reporter.ReportCommandAsync(result, ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed to process fiscal.command payload");
+            }
+        }
+        else if (msgType is not null)
+        {
+            _log.LogWarning("Ignoring message of unsupported type '{Type}'", msgType);
         }
 
         if (!string.IsNullOrEmpty(eventId))
