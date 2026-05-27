@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using FiscalAgent.Configuration;
@@ -106,7 +107,8 @@ public sealed class SseClient : BackgroundService
         await using var stream = await resp.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        string? eventId = null;
+        string? eventId   = null;
+        string? eventType = null;
         var data = new StringBuilder();
 
         while (!ct.IsCancellationRequested)
@@ -116,9 +118,10 @@ public sealed class SseClient : BackgroundService
 
             if (line.Length == 0)
             {
-                if (data.Length > 0)
-                    await HandleEventAsync(eventId, data.ToString(), ct);
-                eventId = null;
+                if (data.Length > 0 || eventType != null)
+                    await HandleEventAsync(eventId, eventType, data.ToString(), ct);
+                eventId   = null;
+                eventType = null;
                 data.Clear();
                 continue;
             }
@@ -129,18 +132,33 @@ public sealed class SseClient : BackgroundService
             {
                 eventId = line[3..].Trim();
             }
+            else if (line.StartsWith("event:", StringComparison.Ordinal))
+            {
+                eventType = line[6..].Trim();
+            }
             else if (line.StartsWith("data:", StringComparison.Ordinal))
             {
                 var value = line[5..];
                 if (value.StartsWith(' ')) value = value[1..]; // SSE: strip one leading space
                 data.Append(value).Append('\n');
             }
-            // "event:" and "retry:" intentionally ignored — single event type.
+            // "retry:" intentionally ignored.
         }
     }
 
-    private async Task HandleEventAsync(string? eventId, string data, CancellationToken ct)
+    private async Task HandleEventAsync(string? eventId, string? eventType, string data, CancellationToken ct)
     {
+        // Remote update signal: spawn updater.ps1 as a detached process (it will stop the
+        // service, replace files, and restart — this process will die when the service stops).
+        if (string.Equals(eventType, "update", StringComparison.OrdinalIgnoreCase))
+        {
+            _log.LogInformation("Remote update signal received. Launching updater...");
+            LaunchUpdater();
+            if (!string.IsNullOrEmpty(eventId))
+                await _store.SetCursorAsync(CursorKey, eventId, ct);
+            return;
+        }
+
         JobMessage? job = null;
         try
         {
@@ -164,5 +182,30 @@ public sealed class SseClient : BackgroundService
         // Advance the cursor once the event is handled (local store guarantees correctness on redelivery).
         if (!string.IsNullOrEmpty(eventId))
             await _store.SetCursorAsync(CursorKey, eventId, ct);
+    }
+
+    private void LaunchUpdater()
+    {
+        var updaterPath = Path.Combine(AppContext.BaseDirectory, "updater.ps1");
+        if (!File.Exists(updaterPath))
+        {
+            _log.LogWarning("updater.ps1 not found at {Path} — cannot self-update", updaterPath);
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{updaterPath}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Failed to launch updater.ps1");
+        }
     }
 }

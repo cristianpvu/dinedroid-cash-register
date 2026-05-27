@@ -19,6 +19,8 @@
   <ItemGroup>
     <Content Include="deploy\setup.ps1" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="deploy\install.bat" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="deploy\updater.ps1" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="version.txt" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
