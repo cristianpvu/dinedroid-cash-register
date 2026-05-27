@@ -54,11 +54,14 @@ public sealed class SseClient : BackgroundService
             return;
         }
 
+        var versionFile = Path.Combine(AppContext.BaseDirectory, "version.txt");
+        var agentVersion = File.Exists(versionFile) ? File.ReadAllText(versionFile).Trim() : "unknown";
+
         while (!ct.IsCancellationRequested)
         {
             try
             {
-                await ConnectAndListenAsync(ct);
+                await ConnectAndListenAsync(agentVersion, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -74,18 +77,14 @@ public sealed class SseClient : BackgroundService
         }
     }
 
-    private async Task ConnectAndListenAsync(CancellationToken ct)
+    private async Task ConnectAndListenAsync(string agentVersion, CancellationToken ct)
     {
         var client = _factory.CreateClient(HttpClientName);
 
-        // Backend identifies the restaurant via a query param: /agent/stream?restaurantId=<int>.
-        // Append it from config unless the configured path already specifies it.
         var path = _opts.Backend.StreamPath;
         string streamUrl;
         if (path.Contains("restaurantId=", StringComparison.OrdinalIgnoreCase))
-        {
             streamUrl = path;
-        }
         else
         {
             var sep = path.Contains('?') ? '&' : '?';
@@ -94,6 +93,7 @@ public sealed class SseClient : BackgroundService
 
         using var req = new HttpRequestMessage(HttpMethod.Get, streamUrl);
         req.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
+        req.Headers.TryAddWithoutValidation("X-Agent-Version", agentVersion);
 
         var lastId = await _store.GetCursorAsync(CursorKey, ct);
         if (!string.IsNullOrEmpty(lastId))
@@ -129,17 +129,13 @@ public sealed class SseClient : BackgroundService
             if (line[0] == ':') continue; // comment / heartbeat ping
 
             if (line.StartsWith("id:", StringComparison.Ordinal))
-            {
                 eventId = line[3..].Trim();
-            }
             else if (line.StartsWith("event:", StringComparison.Ordinal))
-            {
                 eventType = line[6..].Trim();
-            }
             else if (line.StartsWith("data:", StringComparison.Ordinal))
             {
                 var value = line[5..];
-                if (value.StartsWith(' ')) value = value[1..]; // SSE: strip one leading space
+                if (value.StartsWith(' ')) value = value[1..];
                 data.Append(value).Append('\n');
             }
             // "retry:" intentionally ignored.
@@ -179,7 +175,6 @@ public sealed class SseClient : BackgroundService
             _log.LogWarning("Ignoring message of unsupported type '{Type}'", job.Type);
         }
 
-        // Advance the cursor once the event is handled (local store guarantees correctness on redelivery).
         if (!string.IsNullOrEmpty(eventId))
             await _store.SetCursorAsync(CursorKey, eventId, ct);
     }
