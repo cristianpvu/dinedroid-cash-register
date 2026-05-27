@@ -77,7 +77,21 @@ public sealed class SseClient : BackgroundService
     {
         var client = _factory.CreateClient(HttpClientName);
 
-        using var req = new HttpRequestMessage(HttpMethod.Get, _opts.Backend.StreamPath);
+        // Backend identifies the restaurant via a query param: /agent/stream?restaurantId=<int>.
+        // Append it from config unless the configured path already specifies it.
+        var path = _opts.Backend.StreamPath;
+        string streamUrl;
+        if (path.Contains("restaurantId=", StringComparison.OrdinalIgnoreCase))
+        {
+            streamUrl = path;
+        }
+        else
+        {
+            var sep = path.Contains('?') ? '&' : '?';
+            streamUrl = $"{path}{sep}restaurantId={Uri.EscapeDataString(_opts.RestaurantId)}";
+        }
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, streamUrl);
         req.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
 
         var lastId = await _store.GetCursorAsync(CursorKey, ct);
@@ -86,8 +100,8 @@ public sealed class SseClient : BackgroundService
 
         using var resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
         resp.EnsureSuccessStatusCode();
-        _log.LogInformation("SSE connected ({Path}), resuming from id={LastId}",
-            _opts.Backend.StreamPath, lastId ?? "<start>");
+        _log.LogInformation("SSE connected ({Url}), resuming from id={LastId}",
+            streamUrl, lastId ?? "<start>");
 
         await using var stream = await resp.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream, Encoding.UTF8);

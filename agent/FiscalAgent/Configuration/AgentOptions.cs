@@ -35,4 +35,11 @@ public sealed class BackendOptions
     public string StreamPath { get; set; } = "/agent/stream";
     public string ResultPath { get; set; } = "/agent/jobs/{jobId}/result";
     public int ReconnectDelaySeconds { get; set; } = 5;
+
+    /// <summary>
+    /// Optional: connect to this IP directly while still using BaseUrl's hostname for TLS
+    /// and the Host header. Lets the agent bypass a CDN/proxy (e.g. Cloudflare) without
+    /// touching the hosts file or disabling certificate validation. Leave empty in production.
+    /// </summary>
+    public string? OriginIp { get; set; }
 }
