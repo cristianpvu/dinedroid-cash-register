@@ -40,6 +40,12 @@ public sealed class ResultReporter
         return await PostAsync(path, result, result.CommandId, ct);
     }
 
+    public async Task<bool> ReportLabelAsync(LabelResultMessage result, CancellationToken ct)
+    {
+        var path = _opts.Backend.LabelResultPath.Replace("{jobId}", Uri.EscapeDataString(result.JobId));
+        return await PostAsync(path, result, result.JobId, ct);
+    }
+
     private async Task<bool> PostAsync(string path, object payload, string id, CancellationToken ct)
     {
         try

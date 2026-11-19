@@ -10,6 +10,14 @@ public sealed class AgentOptions
 
     public FiscalOptions Fiscal { get; set; } = new();
     public BackendOptions Backend { get; set; } = new();
+    public LabelOptions Labels { get; set; } = new();
+}
+
+public sealed class LabelOptions
+{
+    public string DefaultPrinter { get; set; } = "";
+    public string FakeOutputDir { get; set; } = "data/fake-labels";
+    public int TimeoutSeconds { get; set; } = 15;
 }
 
 public sealed class FiscalOptions
@@ -35,6 +43,7 @@ public sealed class BackendOptions
     public string StreamPath { get; set; } = "/agent/stream";
     public string ResultPath { get; set; } = "/agent/jobs/{jobId}/result";
     public string CommandResultPath { get; set; } = "/agent/commands/{commandId}/result";
+    public string LabelResultPath { get; set; } = "/agent/labels/{jobId}/result";
     public int ReconnectDelaySeconds { get; set; } = 5;
 
     /// <summary>

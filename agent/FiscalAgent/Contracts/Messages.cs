@@ -90,6 +90,24 @@ public sealed class ResultMessage
     [JsonPropertyName("completedAt")] public string CompletedAt { get; set; } = "";
 }
 
+public sealed class LabelMessage
+{
+    [JsonPropertyName("v")] public int V { get; set; } = 1;
+    [JsonPropertyName("type")] public string Type { get; set; } = "label.print";
+    [JsonPropertyName("jobId")] public string JobId { get; set; } = "";
+    [JsonPropertyName("language")] public string Language { get; set; } = "ZPL";
+    [JsonPropertyName("printer")] public string Printer { get; set; } = "";
+    [JsonPropertyName("count")] public int Count { get; set; } = 1;
+    [JsonPropertyName("data")] public string Data { get; set; } = "";
+}
+
+public sealed class LabelResultMessage
+{
+    [JsonPropertyName("jobId")] public string JobId { get; set; } = "";
+    [JsonPropertyName("status")] public string Status { get; set; } = "";
+    [JsonPropertyName("error")] public JobError? Error { get; set; }
+}
+
 public sealed class JobError
 {
     [JsonPropertyName("code")] public string Code { get; set; } = "";

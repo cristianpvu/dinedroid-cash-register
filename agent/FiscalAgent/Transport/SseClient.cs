@@ -24,6 +24,7 @@ public sealed class SseClient : BackgroundService
     private readonly IHttpClientFactory _factory;
     private readonly JobProcessor _processor;
     private readonly CommandProcessor _cmdProcessor;
+    private readonly LabelProcessor _labelProcessor;
     private readonly JobStore _store;
     private readonly ResultReporter _reporter;
     private readonly AgentOptions _opts;
@@ -33,6 +34,7 @@ public sealed class SseClient : BackgroundService
         IHttpClientFactory factory,
         JobProcessor processor,
         CommandProcessor cmdProcessor,
+        LabelProcessor labelProcessor,
         JobStore store,
         ResultReporter reporter,
         IOptions<AgentOptions> opts,
@@ -41,6 +43,7 @@ public sealed class SseClient : BackgroundService
         _factory = factory;
         _processor = processor;
         _cmdProcessor = cmdProcessor;
+        _labelProcessor = labelProcessor;
         _store = store;
         _reporter = reporter;
         _opts = opts.Value;
@@ -197,6 +200,23 @@ public sealed class SseClient : BackgroundService
             catch (Exception ex)
             {
                 _log.LogError(ex, "Failed to process fiscal.command payload");
+            }
+        }
+        else if (msgType == "label.print")
+        {
+            try
+            {
+                var label = JsonSerializer.Deserialize<LabelMessage>(data.Trim());
+                if (label is { JobId.Length: > 0 })
+                {
+                    var result = await _labelProcessor.ProcessAsync(label, ct);
+                    if (result is not null)
+                        await _reporter.ReportLabelAsync(result, ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed to process label.print payload");
             }
         }
         else if (msgType is not null)
